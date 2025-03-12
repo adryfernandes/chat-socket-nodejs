@@ -1,17 +1,30 @@
+/* eslint-disable no-console */
 import http from 'http';
-import { createApp } from './app';
-import { initSocket } from './socket';
-import { PORT } from './config/config';
+import { CORS_ORIGIN, PORT } from './config/config';
+import express from 'express';
+import { Server } from 'socket.io';
+import ChatEvents from './events/chatEvent';
 
 const startServer = () => {
   try {
-    const app = createApp();
+    const app = express();
     const server = http.createServer(app);
 
-    initSocket(server);
+    const io = new Server(server, {
+      cors: {
+        origin: CORS_ORIGIN,
+        methods: ['GET', 'POST'],
+      },
+    });
 
-    server.setTimeout(10000, () => {
-      console.warn('[Timeout]: Conexão encerrada por inatividade.');
+    io.on('connection', (socket) => {
+      console.log('Conectado:', socket.id);
+
+      new ChatEvents(socket, io);
+
+      socket.on('disconnect', () => {
+        console.log('Desconectado:', socket.id);
+      });
     });
 
     server.listen(PORT, () => {
